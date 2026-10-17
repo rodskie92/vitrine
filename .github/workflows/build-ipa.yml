@@ -45,7 +45,18 @@ jobs:
         run: |
           mkdir -p ipa
           curl -fsSL "${{ inputs.ipa_url }}" -o ipa/spotify.ipa
-          case "$(file --mime-type -b ipa/spotify.ipa)" in application/zip|application/x-ios-app) ;; *) echo "::error::Not an IPA"; exit 1 ;; esac
+          if ! unzip -tq ipa/spotify.ipa >/dev/null 2>&1; then
+  echo "::error::Downloaded file is not a valid ZIP archive"
+  echo "Detected file type:"
+  file ipa/spotify.ipa
+  ls -lh ipa/spotify.ipa
+  exit 1
+fi
+
+if ! unzip -Z1 ipa/spotify.ipa | grep -Eq '^Payload/[^/]+\.app/Info\.plist$'; then
+  echo "::error::Archive does not contain the expected iOS app structure"
+  exit 1
+fi
 
       - run: make release
 
